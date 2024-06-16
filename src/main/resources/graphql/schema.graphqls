@@ -1,0 +1,14 @@
+input CurrencyInput {
+    id: String!
+    price: Float!
+    currencies: [String!]!
+}
+
+type Currency {
+    code: String!
+    price: Float!
+}
+
+type Query {
+    convert(input: CurrencyInput): [Currency]
+}
