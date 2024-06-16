@@ -1,0 +1,14 @@
+GRAPHQL http://localhost:8080/graphql
+
+{
+    convert(
+        input: {
+            srcCode: "RUB"
+            price: 5000.123
+            dstCodes: ["USD", "EUR", "THB", "THB"]
+        }
+    ) {
+        code
+        price
+    }
+}

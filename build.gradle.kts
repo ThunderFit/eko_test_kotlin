@@ -21,15 +21,16 @@ repositories {
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-graphql")
-	implementation("org.springframework.boot:spring-boot-starter-web")
-	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-	implementation("org.jetbrains.kotlin:kotlin-reflect")
+	implementation("org.springframework.boot:spring-boot-starter-validation")
+	implementation("org.springframework.boot:spring-boot-starter-webflux")
+
+	implementation("org.jetbrains.kotlin:kotlin-reflect:2.0.0")
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+
 	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
+
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
-	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-	testImplementation("org.springframework:spring-webflux")
-	testImplementation("org.springframework.graphql:spring-graphql-test")
-	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 kotlin {

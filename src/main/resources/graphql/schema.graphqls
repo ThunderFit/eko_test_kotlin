@@ -1,7 +1,7 @@
 input CurrencyInput {
-    id: String!
+    srcCode: ID!
     price: Float!
-    currencies: [String!]!
+    dstCodes: [ID!]!
 }
 
 type Currency {
@@ -10,5 +10,6 @@ type Currency {
 }
 
 type Query {
-    convert(input: CurrencyInput): [Currency]
+    "Currency может быть null, если для нее не нашлось курса."
+    convert(input: CurrencyInput!): [Currency]!
 }
