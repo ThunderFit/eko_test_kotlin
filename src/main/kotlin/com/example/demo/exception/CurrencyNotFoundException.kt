@@ -2,7 +2,7 @@ package com.example.demo.exception
 
 import org.springframework.graphql.execution.ErrorType
 
-class CurrencyNotFoundException(currencyCode: String) : AbstractException (
+class CurrencyNotFoundException(currencyCode: String) : CurrencyException (
     "currency.not.found",
     ErrorType.NOT_FOUND,
     mapOf("currencyCode" to currencyCode),

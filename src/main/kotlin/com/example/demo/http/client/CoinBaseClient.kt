@@ -1,39 +1,66 @@
 package com.example.demo.http.client
 
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import kotlinx.serialization.json.Json
 import com.example.demo.model.CoinbaseCurrenciesResponse
 import com.example.demo.model.CoinbaseCurrencyRatesResponse
-import com.example.demo.model.CoinbaseCurrencyRates
-import com.example.demo.model.CoinbaseCurrency
+import kotlinx.serialization.json.Json
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
+import org.springframework.http.codec.json.KotlinSerializationJsonDecoder
+import org.springframework.http.codec.json.KotlinSerializationJsonEncoder
+import org.springframework.stereotype.Component
+import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.awaitBody
+import java.math.BigDecimal
 
-class CoinBaseClient () {
-    val client = HttpClient.newBuilder().build()
-
-    fun getRates(code: String) : CoinbaseCurrencyRates {
-        val response = this.client.send(
-            this.getRequest("https://api.coinbase.com/v2/exchange-rates?currency=$code"),
-            HttpResponse.BodyHandlers.ofString()
-        )
-
-        return Json.decodeFromString<CoinbaseCurrencyRatesResponse>(response.body()).data
+@Component
+class CoinBaseClient(
+    webClientBuilder: WebClient.Builder,
+) {
+    private val json = Json {
+        ignoreUnknownKeys = true
     }
 
-    fun getCurrencies() : List<CoinbaseCurrency> {
-        val response = this.client.send(
-            this.getRequest("https://api.coinbase.com/v2/currencies"),
-            HttpResponse.BodyHandlers.ofString()
-        )
+    private val webClient = webClientBuilder
+        .baseUrl("https://api.coinbase.com/v2/")
+        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+        .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+        .codecs {
+            it.defaultCodecs().kotlinSerializationJsonEncoder(KotlinSerializationJsonEncoder(json))
+            it.defaultCodecs().kotlinSerializationJsonDecoder(KotlinSerializationJsonDecoder(json))
+        }
+        .build()
 
-        return Json.decodeFromString<CoinbaseCurrenciesResponse>(response.body()).data
+    suspend fun getRates(code: String): Map<String, BigDecimal> {
+        return webClient.get()
+            .uri {
+                it.path("exchange-rates")
+                    .queryParam("currency", code)
+                    .build()
+            }
+            .retrieve()
+            .awaitBody<CoinbaseCurrencyRatesResponse>()
+            .data.rates
+            .let {
+                buildMap {
+                    it.forEach { (k, v) ->
+                        put(k, BigDecimal(v))
+                    }
+                }
+            }
     }
 
-    fun getRequest(uri: String) : HttpRequest {
-        return HttpRequest.newBuilder()
-            .uri(URI.create(uri))
-            .build()
+    suspend fun getCurrencies(): Set<String> {
+        return webClient.get()
+            .uri("currencies")
+            .retrieve()
+            .awaitBody<CoinbaseCurrenciesResponse>()
+            .data
+            .let { items ->
+                buildSet {
+                    items.forEach {
+                        add(it.id)
+                    }
+                }
+            }
     }
 }

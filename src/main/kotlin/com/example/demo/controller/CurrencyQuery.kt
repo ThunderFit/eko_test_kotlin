@@ -1,48 +1,78 @@
 package com.example.demo.controller
 
-import com.example.demo.exception.CurrencyNotFoundException
-import com.example.demo.exception.CurrencyIdUndefinedException
+import com.example.demo.controller.dto.CurrencyInput
 import com.example.demo.exception.BadInputException
-import com.example.demo.model.Currency
-import com.example.demo.dto.ConvertRequest
-import org.springframework.graphql.data.method.annotation.Argument
-import org.springframework.graphql.data.method.annotation.QueryMapping
-import org.springframework.stereotype.Controller
+import com.example.demo.exception.CurrencyException
+import com.example.demo.exception.CurrencyIdUndefinedException
 import com.example.demo.http.client.CoinBaseClient
+import com.example.demo.controller.dto.Currency
+import graphql.GraphQLError
+import graphql.GraphqlErrorBuilder
+import graphql.schema.DataFetchingEnvironment
+import jakarta.validation.ConstraintViolationException
+import jakarta.validation.Valid
+import kotlinx.coroutines.reactor.mono
+import org.springframework.graphql.data.method.annotation.Argument
+import org.springframework.graphql.data.method.annotation.GraphQlExceptionHandler
+import org.springframework.graphql.data.method.annotation.QueryMapping
+import org.springframework.graphql.execution.ErrorType
+import org.springframework.stereotype.Controller
+import reactor.core.publisher.Mono
 
 
 @Controller
-class CurrencyQuery() {
+class CurrencyQuery(
+    private val coinbaseClient: CoinBaseClient,
+) {
     @QueryMapping
-    fun convert(@Argument input: ConvertRequest): Array<Currency> {
+    fun convert(@Argument @Valid input: CurrencyInput): Mono<List<Currency?>> = mono {
 
-        if (input.currencies.size == 0) {
+        if (input.dstCodes.isEmpty()) {
             throw BadInputException("currencies")
         }
 
-        val coinbaseClient = CoinBaseClient()
-        val coinbaseCurrencies = coinbaseClient.getCurrencies()
-        val currencyIds = coinbaseCurrencies.map { it.id }
+        val currencyIds = coinbaseClient.getCurrencies()
 
-        if (!currencyIds.contains(input.id)) {
+        if (input.srcCode !in currencyIds) {
             throw CurrencyIdUndefinedException("input.id")
         }
-        if (!currencyIds.containsAll(input.currencies)) {
+        if (!currencyIds.containsAll(input.dstCodes)) {
             throw CurrencyIdUndefinedException("currencies")
         }
 
-        var coinbaseCurrency = coinbaseClient.getRates(input.id)
+        val rates = coinbaseClient.getRates(input.srcCode)
 
-        var currencies = arrayOf<Currency>()
-
-        input.currencies.forEach({
-            var rate = coinbaseCurrency.rates[it]?.toFloat()
-            //TODO: must be null
-            if (rate !== null) {
-                currencies += Currency(it, input.price * rate)
+        input.dstCodes.map { code ->
+            rates[code]?.let { rate ->
+                Currency(code, input.price * rate)
             }
-        })
+        }
+    }
 
-        return currencies
+    @GraphQlExceptionHandler
+    fun handleException(ex: CurrencyException, env: DataFetchingEnvironment): GraphQLError {
+        return GraphqlErrorBuilder.newError(env)
+            .errorType(ex.errorType)
+            .message(ex.message)
+            .extensions(
+                mapOf(
+                    "code" to ex.code,
+                    "params" to ex.params,
+                )
+            )
+            .build()
+    }
+
+    @GraphQlExceptionHandler
+    fun handleException(ex: ConstraintViolationException, env: DataFetchingEnvironment): GraphQLError {
+        return GraphqlErrorBuilder.newError(env)
+            .errorType(ErrorType.BAD_REQUEST)
+            .message(ex.message)
+            .extensions(mapOf(
+                "constraintViolations" to ex.constraintViolations.map {
+                    it.propertyPath.toString() to it.message
+                }
+            ))
+            .build()
     }
 }
