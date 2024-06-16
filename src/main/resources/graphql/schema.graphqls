@@ -1,3 +1,4 @@
+# fixme: Несогласованное именование полей: `id`, `currencies`, `code` - по сути содержат одно и то же.
 input CurrencyInput {
     id: String!
     price: Float!
@@ -10,5 +11,7 @@ type Currency {
 }
 
 type Query {
+    # fixme: input должен быть не nullable -> `input: CurrencyInput!`.
+    # fixme: Ответ тоже -> `[Currency!]!`.  Т.к. это корневой элемент, в случае ошибки ответ будет null принудительно. Элементы массива, судя по коду, тоже не бывают null.
     convert(input: CurrencyInput): [Currency]
 }

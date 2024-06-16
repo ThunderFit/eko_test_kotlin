@@ -11,6 +11,7 @@ import com.example.demo.model.CoinbaseCurrencyRates
 import com.example.demo.model.CoinbaseCurrency
 
 class CoinBaseClient () {
+    // fixme: `client` должен быть приватным в данном случае.
     val client = HttpClient.newBuilder().build()
 
     fun getRates(code: String) : CoinbaseCurrencyRates {
@@ -31,6 +32,7 @@ class CoinBaseClient () {
         return Json.decodeFromString<CoinbaseCurrenciesResponse>(response.body()).data
     }
 
+    // fixme: `getRequest` тоже должен быть приватным.
     fun getRequest(uri: String) : HttpRequest {
         return HttpRequest.newBuilder()
             .uri(URI.create(uri))
